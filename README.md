@@ -176,10 +176,12 @@ var undefined, key, $, classList,emptyArray = [],
         'z-index': 1,
         'zoom': 1
       },
+
       //用来匹配文档碎片的正则表达式，形如<div>、<div></div>的都可以
       fragmentRE = /^\s*<(\w+|!)[^>]*>/,
       //匹配非嵌套标签，如<div><p></p></div>就不会被匹配，注意?:用来关闭捕获
       singleTagRE = /^<(\w+)\s*\/?>(?:<\/\1>|)$/,
+      //用来将<div/>替换成<div></div>
       tagExpanderRE = /<(?!area|br|col|embed|hr|img|input|link|meta|param)(([\w:]+)[^>]*)\/>/ig,
       rootNodeRE = /^(?:body|html)$/i,
       //大写字母匹配
@@ -190,6 +192,7 @@ var undefined, key, $, classList,emptyArray = [],
       
       //相对于某个元素的偏移操作的函数的属性名称列表
       adjacencyOperators = ['after', 'prepend', 'before', 'append'],
+
       table = document.createElement('table'),
       tableRow = document.createElement('tr'),
       containers = {
@@ -203,6 +206,7 @@ var undefined, key, $, classList,emptyArray = [],
       },
       //匹配文档可以交互的3种readyState值
       readyRE = /complete|loaded|interactive/,
+      //检测是否是“简单选择器”
       simpleSelectorRE = /^[\w-]*$/,
       class2type = {},
       //获取Object.prototype.toString的引用，用来识别对象类型，如Object.prototype.toString.call([])将返回[object Array],表明这是一个数组
@@ -246,7 +250,7 @@ Zepto.js.matches = function(element, selector) {
       return match
     }
 ```
-它的实现方式是先判断元素是否实现了matchesSelector函数,没有的话就寻找父节点，在父节点上测试，如果未有父节点，则将元素插入tempParent元素（也就是一个空得div元素）中，形成父节点再测试，最后返回结果。这里使用了下面定义的Zepto.js.qsa函数，它是一个相当简洁的选择器。另外，~操作符用来将~-1计算为0，作为假值。
+它的实现方式是先判断元素是否实现了matchesSelector函数,没有的话就寻找父节点，在父节点上测试，如果未有父节点，则将元素插入tempParent元素（也就是一个空的div元素）中，生成父节点再测试，最后返回结果。这里使用了下面定义的Zepto.qsa函数，它是一个相当简洁的选择器。另外，为操作符用来将~-1计算为0，作为假值。
 接下来是一系列工具函数的定义。
 ``` JavaScript
 function type(obj) {
@@ -276,7 +280,7 @@ function isFunction(value) {
       return type(obj) == "object"
  }
 ```
-前两个函数中必须先判断是否是null和undefined，因为null与undefined上的属性同样是undefined。isObject函数用来判断对象是否是广义的对象。
+前两个函数中必须先判断是否是null和undefined，因为null与undefined上的属性同样是undefined。isObject函数用来判断对象是否是广义的对象，比如各种元素对象也会返回true。
 
 ``` JavaScript
 
@@ -326,7 +330,7 @@ camelize = function(str) {
       })
     }
 ```
-字符串转驼峰形式。正则/-+(.)?/匹配“-”及后面的字符。
+字符串转驼峰形式。正则/-+(.)?/匹配“-”及后面的字符串。
 
 ``` JavaScript
 function dasherize(str) {
@@ -337,7 +341,7 @@ function dasherize(str) {
         .toLowerCase()
     }
 ```
-将字符串转变为卧蛇式。形如“JavaScript”变为“Java-Script”，用于Zepto.js原型中的css函数实现。
+将字符串转变为以“-”相隔的形式。形如“JavaScript”变为“Java-Script”，用于Zepto.js原型中的css函数实现。
 ``` JavaScript
  uniq = function(array) {
       return filter.call(array, function(item, idx) {
@@ -352,7 +356,7 @@ function classRE(name) {
         classCache[name] : (classCache[name] = new RegExp('(^|\\s)' + name + '(\\s|$)'))
 }
 ```
-生成用来判定某个类是否在className中的正则表达式。它可能位于开通、结尾，在中间的左右必须都有空格。
+生成用来判定某个类是否在className中的正则表达式。它可能位于开通、中间、结尾。
 ``` JavaScript
 function maybeAddPx(name, value) {
       return (typeof value == "number" && !cssNumber[dasherize(name)]) ? value + "px" :value
@@ -374,7 +378,7 @@ function defaultDisplay(nodeName) {
 }
 ```
 
-获取某种元素的默认显示方式。实现方式是创建一个临时节点，插入body元素中，之后使用getComputedStyle获取display属性值。不过，其实这不能真正地获取默认display值，因为这会被样式表影响。这个函数用在原型show方法上。
+获取某种元素的默认显示方式。实现方式是创建一个临时节点，插入body元素中，之后使用getComputedStyle获取display属性值。不过，其实这不能真正地获取默认display值，因为这会被样式表影响。这个函数用在原型show方法上，应该要考虑显示出来时该有的display。
 ``` JavaScript
  function children(element) {
       return 'children' in element ?
@@ -424,65 +428,65 @@ Z函数是生成Zepto.js对象的构造函数。下面会讲到的$.fn是Z.proto
       return dom
  }
 ```
-Zepto.js.fragment是Zepto.js逻辑中的关键部分，当使用$('<div></div>')之类的语句时就是调用这个函数来实现创建DOM片段的。首先如果是简单标签，也就是非嵌套标签，则立即创建对应元素并执行$函数，否者，先获取最外层的标签名，通过之前创建的containers对象字符串注入容器中，最后分别取出形成数组。另外，如果有properties对象的，将刚刚形成的DOM节点列表生成Zepto.js对象，再调用attr方法设置。最后返回。这里要注意：
+Zepto.fragment是Zepto.js逻辑中的关键部分，当使用$('<div></div>')之类的语句时就是调用这个函数来实现创建DOM片段的。首先如果是简单标签，也就是非嵌套标签，则立即创建对应元素并执行$函数，否者，先获取最外层的标签名，通过之前创建的containers对象字符串写入合适的容器对象中，最后分别取出形成数组。另外，如果有properties对象的，将刚刚形成的DOM节点列表生成Zepto集合，再调用attr方法设置。最后返回。这里要注意：
 * 表格内部的标签只能存在与table及内部的如tbody标签内，否者只会留下空格换行节点，所以需要获取合适的父容器
 
 ``` JavaScript
-Zepto.js.Z=function(dom,selector) {
+Zepto.Z=function(dom,selector) {
 	return new Z(dom,selector)
 }
 ```
-调用Z构造函数来生成Zepto.js对象。
+调用Z构造函数来生成Zepto集合。
 
 ``` JavaScript
-Zepto.js.isZ = function(object) {
-      return object instanceof Zepto.js.Z
+Zepto.isZ = function(object) {
+  return object instanceof Zepto.Z
 }
 ```
 通过instanceof操作符来判断对象是否是Zepto.js对象。
 
 ``` JavaScript
- Zepto.js.init = function(selector, context) {
+ Zepto.init = function(selector, context) {
       var dom
-      if (!selector) return Zepto.js.Z()
+      if (!selector) return Zepto.Z()
       else if (typeof selector == 'string') {
         selector = selector.trim()
         if (selector[0] == '<' && fragmentRE.test(selector))
-          dom = Zepto.js.fragment(selector, RegExp.$1, context), selector = null
+          dom = Zepto.fragment(selector, RegExp.$1, context), selector = null
         else if (context !== undefined) return $(context).find(selector)
-        else dom = Zepto.js.qsa(document, selector)
+        else dom = Zepto.qsa(document, selector)
       }
       else if (isFunction(selector)) return $(document).ready(selector)
-      else if (Zepto.js.isZ(selector)) return selector
+      else if (Zepto.isZ(selector)) return selector
       else {
         if (isArray(selector)) dom = compact(selector)
         else if (isObject(selector))
           dom = [selector], selector = null
-        else if (fragmentRE.test(selector))
-          dom = Zepto.js.fragment(selector.trim(), RegExp.$1, context), selector = null
+        else if (fragmentRE.test(selector))//冗余
+          dom = Zepto.fragment(selector.trim(), RegExp.$1, context), selector = null//冗余
         else if (context !== undefined) return $(context).find(selector)
 
-        else dom = Zepto.js.qsa(document, selector)
+        else dom = Zepto.qsa(document, selector)
       }
-      return Zepto.js.Z(dom, selector)
+      return Zepto.Z(dom, selector)
     }
 ```
-Zepto.js的入口函数，也就是我们实际使用的$函数或者Zepto.js函数。它一共处理了下面几种情况：
-* 完全没有参数，返回一个空的Zepto.js对象。其实没有人会这样使用，不过对于这样暴露给用户的API，它应该有良好的参数检测，防止异常
-* 是字符串的情况可能有有两中，DOM片段和选择器，如果是DOM片段，调用之前的Zepto.js.fragment函数，这时，context应该是个对象。否则在不同的上下文里进行筛选。
+Zepto的入口函数，也就是我们实际使用的$函数或者Zepto函数。它一共处理了下面几种情况：
+* 完全没有参数，返回一个空的Zepto对象。其实没有人会这样使用，不过对于这样暴露给用户的API，它应该有良好的参数检测，防止异常
+* 是字符串的情况可能有有两中，DOM片段和选择器，如果是DOM片段，调用之前的Zepto.fragment函数，这时，context应该是个对象。否则在不同的上下文里进行筛选。
 * 如果selector是函数，则调用$(document).ready(selector)注册DOM可交互时的事件，并返回。
-* 如果是已经是Zepto.js对象，返回它即可
-* 如果是类数组，形成去除null和undefined的数组，保存在dom变量中，之后调用Zepto.js.Z(dom,selector)形成Zepto.js对象
-* 如果是对象，也将它保存在dom变量的数组中，之后调用Zepto.js.Z生成Zepto.js对象
+* 如果是已经是Zepto对象，返回它即可
+* 如果是类数组，形成去除null和undefined的数组，保存在dom变量中，之后调用Zepto.Z(dom,selector)形成Zepto集合
+* 如果是对象，也将它保存在dom变量的中，之后调用Zepto.Z生成Zepto集合
 
-代码内部使用了接下来会介绍的Zepto.js.qsa函数，也就是选择器函数。另外，在判断selector是否为数组和对象的逻辑后面代码是冗余，上面已经有对字符串的处理了。
+代码内部使用了接下来会介绍的Zepto.qsa函数，也就是选择器函数。另外，在判断selector是否为数组和对象的逻辑后面代码是冗余，上面已经有对字符串的处理了。
 
 ``` JavaScript
  $ = function(selector, context) {
-      return Zepto.js.init(selector, context)
+      return Zepto.init(selector, context)
  }
 ```
-入口函数，可以看到它是Zepto.js.init的简单封装。
+入口函数，可以看到它是Zepto.init的简单封装。
 
 ``` JavaScript
 function extend(target, source, deep) {
@@ -496,78 +500,7 @@ function extend(target, source, deep) {
         } else if (source[key] !== undefined) target[key] = source[key]
 }
 ```
-对象拷贝函数。deep为真则采用递归深拷贝。具体实现是检测source属性是原始值还是数组还是对象，如果是后两者，则再次调用extend。这里可以看下jQuery的extend函数的实现:
-``` JavaScript juqery-3.1.1.js
-jQuery.extend = jQuery.fn.extend = function() {
-	var options, name, src, copy, copyIsArray, clone,
-		target = arguments[ 0 ] || {},
-		i = 1,
-		length = arguments.length,
-		deep = false;
-
-	// Handle a deep copy situation
-	if ( typeof target === "boolean" ) {
-		deep = target;
-
-		// Skip the boolean and the target
-		target = arguments[ i ] || {};
-		i++;
-	}
-
-	// Handle case when target is a string or something (possible in deep copy)
-	if ( typeof target !== "object" && !jQuery.isFunction( target ) ) {
-		target = {};
-	}
-
-	// Extend jQuery itself if only one argument is passed
-	if ( i === length ) {
-		target = this;
-		i--;
-	}
-
-	for ( ; i < length; i++ ) {
-
-		// Only deal with non-null/undefined values
-		if ( ( options = arguments[ i ] ) != null ) {
-
-			// Extend the base object
-			for ( name in options ) {
-				src = target[ name ];
-				copy = options[ name ];
-
-				// Prevent never-ending loop
-				if ( target === copy ) {
-					continue;
-				}
-
-				// Recurse if we're merging plain objects or arrays
-				if ( deep && copy && ( jQuery.isPlainObject( copy ) ||
-					( copyIsArray = jQuery.isArray( copy ) ) ) ) {
-
-					if ( copyIsArray ) {
-						copyIsArray = false;
-						clone = src && jQuery.isArray( src ) ? src : [];
-
-					} else {
-						clone = src && jQuery.isPlainObject( src ) ? src : {};
-					}
-
-					// Never move original objects, clone them
-					target[ name ] = jQuery.extend( deep, clone, copy );
-
-				// Don't bring in undefined values
-				} else if ( copy !== undefined ) {
-					target[ name ] = copy;
-				}
-			}
-		}
-	}
-
-	// Return the modified object
-	return target;
-};
-```
-与Zepto.js的extend函数的实现相比，jQuery版本主要有两个变化，一是，参数数量变得灵活，二是，处理了循环引用的问题，变得更加安全了。不过Zepto.js设计目的就是更加轻量。
+对象拷贝函数。deep为真则采用递归深拷贝。具体实现是检测source属性是原始值还是数组还是对象，如果是后两者，则再次调用extend。其实这里处理深拷贝并不严谨，可能会形成循环引用，不过Zepto.js目标就是轻量兼容，所以某些代码不严谨也很正常。
 
 ``` JavaScript
 $.extend = function(target) {
@@ -602,8 +535,7 @@ Zepto.js.qsa = function(element, selector) {
 ```
 这是Zepto.js的选择器函数，但使用$(selector)时调用的就是它。首先，Zepto.js.qsa检查了选择器的几个特征，包括是否是id选择器，或者类选择器，是否是简单的非复合选择器（这里指单个的id、class、tag并且命名常规的选择器）。这样，如果是简单的id选择器并且上下文支持getElementByID，则调用getElementById函数。之后排除掉不合理的上下文环境后，先是判断是否是简单的class选择器，再判断是否是简单的tag属性，最后仍未有结果就使用兼容性最强的querySelectorAll函数了。这里，要注意：
 * 文档片段不支持getElementByID函数，有些浏览器文档片段不支持getElementsByClassName函数，所以要进行判断
-* 使用id、class、tag选择器是出于性能的考虑。
-  另外，Zepto.js.qsa函数只是原生API的简单封装，相比于jQuery的Sizzle选择器，它不支持特殊的选择方法，例如$('tr:odd')，它用来选择奇数索引的tr元素。
+* 使用id、class、tag选择器是出于性能的考虑。另外，Zepto.js.qsa函数只是原生API的简单封装，相比于jQuery的Sizzle选择器，它不支持特殊的选择方法，例如$('tr:odd')，它用来选择奇数索引的tr元素。
 
 ``` JavaScript
 function filtered(nodes, selector) {
