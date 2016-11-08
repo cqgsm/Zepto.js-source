@@ -1,5 +1,4 @@
-$ # Zepto.js源码详解
-$ Zepto.js是jQuery.js在移动浏览器端的最知名的替代，有着和jQuery一样的API和大部分相同的表现。本篇文章将详细解释Zepto.jsZepto.js的源码工作细节——从整体结构到某个函数的实现。之所以细致地去追求理解它的源码，目的有二：一、学习JavaScript代码的编写与组织技巧；二、学习DOM操作技巧，加深对DOM接口的理解。 本篇文章基于[Zepto.js] (http://requirejs.org/ "RequireJS")，不包含可选模块。
+ Zepto.js是jQuery.js在移动浏览器端的最知名的替代，有着和jQuery一样的API和大部分相同的表现。本篇文章将详细解释Zepto.jsZepto.js的源码工作细节——从整体结构到某个函数的实现。之所以细致地去追求理解它的源码，目的有二：一、学习JavaScript代码的编写与组织技巧；二、学习DOM操作技巧，加深对DOM接口的理解。 本篇文章讲解的是Zepto.js 1.2.0默认代码，不包含可选模块。
 # Zepto.js源码概况
 ## 代码逻辑结构
 Zepto.js的最外层是个典型的IIFE。
@@ -16,7 +15,7 @@ Zepto.js的最外层是个典型的IIFE。
 ```
 
 在这里，需要注意AMD模块规范与this关键词的指向。
-一：AMD模块是JavaScript模块解决方案中的一种，在浏览器端最知名的实现是[RequireJS](http://requirejs.org/ "RequireJS")。一个标准的AMD模块写法如下:
+* AMD模块是JavaScript模块解决方案中的一种，在浏览器端最知名的实现是[RequireJS](http://requirejs.org/ "RequireJS")。一个标准的AMD模块写法如下:
 
 ```JavaScript
 //foo.js
@@ -32,18 +31,18 @@ define(function(){
 使用时如下：
 
 ```JavaScript
-main.js
+//main.js
 require(['foo'], function (foo) {
 　　　　console.log(foo.foo)//'foo'
 　　　　console.log(foo.bar)//'bar'
 })
 ```
 
-所以，在Zepto.js的最外层代码中，先检测当前环境是否支持AMD，可以使用的话直接调用defined函数来生成AMD模块。也就是说，factory(global)将会返回一个对象，而这个对象就是Zepto.js入口函数对象。不支持AMD则直接调用，返回的入口对象将不会被捕获，因为factory函数内部将直接将入口函数添加在全局对象上，所以并不会影响访问。
-二：在最外层代码中，非严格模式下的this关键词将指向window，这个是接下来代码运行的关键。所以，最终情况是factory函数以window对象为参数，在内部生成了Zepto.js入口对象并返回。
+所以，在Zepto.js的最外层代码中，先检测当前环境是否支持AMD，如果支持则调用defined函数来生成AMD模块。也就是说，factory(global)将会返回一个对象，而这个对象就是Zepto.js入口函数对象。不支持AMD则直接调用，返回的入口对象将不会被捕获，因为factory函数内部将直接将入口函数添加在全局对象上，所以并不会影响访问。
+* 在最外层代码中，非严格模式下的this关键词将指向window，这个是接下来代码运行的关键。所以，最终情况是factory函数以window对象为参数，在内部生成了Zepto.js入口对象并返回。
 
 ## 链式调用的实现
- 链式调用时jQuery和Zepto.js中一个十分方便的特性。它实现的原理十分简单，即在原型对象中返回this。一个简单的如下：
+ 链式调用是一种API风格，它在jQuery和Zepto.js中得到了很好的展现。它实现的原理十分简单，即在原型对象中返回this。一个简单实现的如下：
 ``` JavaScript
 function ArrayChain(arr) {
     this.arr = arr;
@@ -76,38 +75,38 @@ function ArrayChain(arr) {
 
 ## API风格
 * 驼峰命名法
-* 很多方法在提供参数时是对Zepto.js集合中的所以元素进行遍历设置，空参数时获取集合中第一个元素的相关属性值
+* 很多方法在提供参数时是对Zepto.js集合中的所以元素进行遍历设置，空参数时获取集合中第一个元素的属性值
 
 # Zepto.js的模块
 ## 模块总览
-上面说到factory函数以window为参数执行，而factory函数结构与模块如下：
+上面说到factory函数以window为参数执行，而factory函数结构如下：
 ```JavaScript
 //factory函数，包含生成Zepto.js入口函数及各个模块的的完整逻辑
 function (window){
 //核心模块
-var Zepto.js=(function(){
+var Zepto=(function(){
 }());
 
 //挂载Zepto.js入口函数到window上，并尝试添加别名$
-window.Zepto.js=Zepto.js
-window.$===undefined && (window.$=Zepto.js)
+window.Zepto=Zepto
+window.$===undefined && (window.$=Zepto)
 
 //事件模块
 ;
 (function($){
-})(Zepto.js)
+})(Zepto)
 
 //ajax模块
 ;
 (function($){
-})(Zepto.js)
+})(Zepto)
 
 //工具函数模块
 ;
 (function($){
-})(Zepto.js)
+})(Zepto)
 
-//重写window.getComputedStyle
+//重写window.getComputedStyle,IE浏览器上getComputedStyle被传入undefined时会报错
 (function(){
 try {
 	getComputedStyle(undefined)
@@ -128,34 +127,33 @@ retrun Zepto.js
 }
 ```
 具体点说，在核心模块执行完成后Zepto.js的构造函数、原型对象、DOM除事件外的操作就已经完成，之后的模块是在扩充以上的函数对象，并最终返回Zepto.js入口函数，不过这只在使用AMD加载器的情况下有意义。
-这里要注意两点：
-* 最后一个IIFE目的是重写getComputeStyle函数。原因是在某些浏览器里当第一个参数不是DOM元素时会抛出错误，而核心模块的CSS部分会使用这个函数，Zepto.js希望即使参数并非预期也不抛出错误被浏览器捕获进而导致运行中断。
-* 虽然某些地方使用了分号，但在这里去除分号后也无妨。
+这里要注意：
+* 最后一个IIFE目的是重写getComputeStyle函数。原因是在IE浏览器里当第一个参数不是DOM元素时会抛出错误，而核心模块的CSS部分会使用这个函数，Zepto.js希望即使参数并非预期也不抛出错误被浏览器捕获进而导致运行中断。
   接下来我将逐个讲解核心模块、事件模块、Ajax模块、工具函数模块。
 
 ## 核心模块
-核心模块是Zepto.js主体逻辑结构和DOM除事件外操作的定义模块。和其他模块一样，核心模块也是一个IIFE，它返回Zepto.js入口函数。另外里面也有几个辅助实现Zepto.js逻辑的对象与函数，这里把主要的列出来：
+核心模块是Zepto.js主体逻辑结构和DOM除事件外操作的定义模块。和其他模块一样，核心模块也是一个IIFE，它返回Zepto.js入口函数。另外里面也有几个帮助实现Zepto.js逻辑的对象与函数，这里把主要的列出来：
 * $函数：最终返回用户使用的Zepto.js入口函数。
-  * $.Zepto.js对象(注意这是这个模块里的局部变量)：其中的函数与对象会被$入口函数使用
-    * $.Zepto.js.init：用来形成Zepto.js对象的主体逻辑
-    * $.Zepto.js.isZ：用来判断某个对象是否是Zepto.js对象
-    * $.Zepto.js.Z：给数组或NodeList挂载原型对象，也就是各个Zepto.js对象有的方法，并且添加selector属性
-      * $.Zepto.js.Z.prototype：指向$.fn，但$.Zepto.js.Z不是Zepto.js对象的构造函数
-    * $.Zepto.js.fragment：用来创建DOM片段
-    * $.Zepto.js.qsa：选择器函数
-    * $.fn：原型对象，包含Zepto.js对象的原型
-* Z构造函数：$.Zepto.js.Z的执行主体，用来形成每个包含元素的数值并添加selector属性，之后挂载$.fn对象为原型
-* Z.prototype：指向$.fn，Z函数才是真正的Zepto.js对象的构造函数
+  * $.Zepto对象(注意这是这个模块里的局部变量)：其中的函数与对象会被$入口函数使用
+    * $.Zepto.init：用来形成Zepto.js对象的主体逻辑
+    * $.Zepto.isZ：用来判断某个对象是否是Zepto.js对象
+    * $.Zepto.Z：给数组或NodeList挂载原型对象，也就是各个Zepto.js对象有的方法，并且添加selector属性
+      * $.Zepto.Z.prototype：指向$.fn，但$.Zepto.js.Z不是Zepto.js对象的构造函数
+    * $.Zepto.fragment：用来创建DOM片段
+    * $.Zepto.qsa：选择器函数
+    * $.fn：原型对象，包含Zepto对象的原型
+* Z构造函数：$.Zepto.Z的执行主体，用来形成每个包含元素的数值并添加selector属性，之后挂载$.fn对象为原型
+* Z.prototype：指向$.fn，Z函数才是真正的Zepto对象的构造函数
   
-除以上外，还有多个函数与对象被添加在$函数或$.Zepto.js对象上，不过它们都算辅助函数，所以暂时省略。现在我以一个例子来演绎以上函数与对象间的关系。
+除以上外，还有多个函数与对象被添加在$函数或$.Zepto对象上，不过它们都算辅助函数，所以暂时省略。现在我以一个例子来演绎以上函数与对象间的关系。
 假设页面中有很多p元素，这样你会调用$('p')，这样会按顺序调用一下函数:
 * 调用核心模块的$方法，以字符串'p'为参数
-* 在$函数内部调用Zepto.js.init函数，同样以字符串'p'为参数
-* 在Zepto.js.init函数内调用Zepto.js.qsa函数，得到由每个p元素组成的NodeList对象，再调用Zepto.js.Z函数
-* 在Zepto.js.Z函数中执行new Z，这样，NodeList对象中的每个对象被依次放到一个对象中，并将该对象的原型指向$.fn对象。
-* 依次返回，这样使用者将得到一个以$.fn对象为原型并包含每个p元素的类数组，这就是最终使用的Zepto.js对象
+* 在$函数内部调用Zepto.init函数，同样以字符串'p'为参数
+* 在Zepto.init函数内调用Zepto.qsa函数，得到由每个p元素组成的NodeList对象，再调用Zepto.Z函数
+* 在Zepto.Z函数中执行new Z，这样，NodeList对象中的每个对象被依次放到一个对象中，并将该对象的原型指向$.fn对象
+* 依次返回，这样使用者将得到一个以$.fn对象为原型并包含每个p元素的类数组，这就是最终使用的Zepto集合
 
-接下来，我会详细说明Zepto.js核心模块。
+接下来，我会详细说明Zepto.js的核心模块。
 
 ```JavaScript
 var undefined, key, $, classList,emptyArray = [],
