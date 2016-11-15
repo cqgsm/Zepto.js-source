@@ -1,4 +1,4 @@
- 尽管当下前端开发的技术栈中框架运用已经十分普遍，jQuery类的库正在衰落，不过jQuery中大量的DOM操作技巧并非变得无意义相反而是融入到了各个框架之中。Zepto.js是jQuery.js在移动浏览器端的最知名的替代，有着和jQuery一样的API和大部分相同的表现，同时它有少了很多用来兼容不同浏览器的代码，这使得它变得相当轻量，所以在现在阅读Zepto.js的代码相较于jQuery或许更有价值。本篇文章将详细解释Zepto.js的源码工作细节——从整体结构到某个函数的实现。之所以细致地去追求理解它的源码，目的有二：一、学习JavaScript代码的编写与组织技巧，了解一个库的开发中该有哪些考量与设计；二、学习DOM操作技巧，加深对DOM接口s的理解。 本篇文章讲解的是Zepto.js 1.2.0默认代码，不包含可选模块。
+ 尽管当下前端开发的技术栈中框架运用已经十分普遍，jQuery类的库正在衰落，不过jQuery中大量的DOM操作技巧并非变得无意义相反而是融入到了各个框架之中。Zepto.js是jQuery.js在移动浏览器端的最知名的替代，有着和jQuery一样的API和大部分相同的表现，同时它有少了很多用来兼容不同浏览器的代码，这使得它变得相当轻量，所以在现在阅读Zepto.js的代码相较于jQuery或许更有价值。本篇文章将详细解释Zepto.js的源码工作细节——从整体结构到某个函数的实现。之所以细致地去追求理解它的源码，目的有二：一、学习JavaScript代码的编写与组织技巧，了解一个库的开发中该有哪些考量与设计；二、学习DOM操作技巧，加深对DOM接口s的理解。 本篇文章讲解的是Zepto.js 1.2.0默认代码，不包含可选模块。另外，博客地址是http://codeduan.com/posts/zepto.html，同时也欢迎大家通过Issues来探讨。
 # Zepto.js源码概况
 ## 代码逻辑结构
 Zepto.js的最外层是个典型的IIFE。
@@ -44,13 +44,14 @@ require(['foo'], function (foo) {
 ## 链式调用的实现
  链式调用是一种API风格，它在jQuery和Zepto.js中得到了很好的展现。它实现的原理十分简单，即在原型对象中返回this。一个简单实现的如下：
 ``` JavaScript
+//JavaScript数组方法中有些不是返回被操作了的数组，所以需要链式调用的话可以这样实现
 function ArrayChain(arr) {
     this.arr = arr;
   }
 
   ArrayChain.prototype = {
-    reverse: function() {
-      this.arr.reverse();
+    shift: function() {
+      this.arr.shift();
       return this;
     },
     push: function() {
@@ -66,7 +67,7 @@ function ArrayChain(arr) {
   }
 
   var a=new ArrayChain([1,2,3]);
-  a.reverse().push(7,8,9).get()//[3.2.1,7,8,9]
+  a.shift().push(7,8,9).get()//[2,3,7,8,9]
   ```
 
 ## 编码风格
