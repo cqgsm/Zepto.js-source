@@ -1663,7 +1663,7 @@ function realEvent(type) {
       return hover[type] || (focusinSupported && focus[type]) || type
 }
 ```
-revlEvent函数返回真正要注册的事件。比如前面提到的将focus与blur替换成focusin与focusout。另外Zepto也把mouseenter与mouseleave事件替换成mouseover与mouseleave事件，原因同样是前两者不支持冒泡。其他事件类型直接返回。
+revlEvent函数返回真正要注册的事件。比如前面提到的将focus与blur替换成focusin与focusout。另外Zepto也把mouseenter与mouseleave事件替换成mouseover与mouseout事件，原因同样是前两者不支持冒泡。其他事件类型直接返回。
 
 ``` JavaScript
 function add(element, events, fn, data, selector, delegator, capture) {
@@ -1697,17 +1697,17 @@ function add(element, events, fn, data, selector, delegator, capture) {
       })
  }
 ```
-add函数是注册事件的关键逻辑，内部通过调用addEventListener函数来注册事件。它接受七个参数，分别是：要监听的元素，要注册的事件列表，事件处理程序，附加的数据对象，进行事件委托时实际要监听的元素的选择器，事件委托函数，一个标识事件捕获的布尔值。函数的实践逻辑如下：
-1. 设置或返回要注册事件的元素的_zid属性，它是handlers对象的键
-2. 创建或返回一个保存该元素事件信息对象的数组set
-3. 如果是ready事件，则在document上注册ready事件
-4. 解析event字符串，返回一个包含事件信息的对象handler
-5. 将回调函数与委托时的选择器挂载在handler上
-6. 如果要注册的事件是mouseenter或者mouseleave，则用mouseover或者mouseout替代。如何替代？这里需要对回调函数进行包装，也就是设计一个逻辑判断只留下符合mouseenter与mouseleave的情况留下。首先获取事件对象的relatedTarget属性，之后如果related为假值，这个情况意味着鼠标是从浏览器外移动到监听元素里的，所以执行实际的回调函数。当relatedTarget存在时，要满足relatedTarget不为监听元素（因为在mouseover的情况下从注册元素移动到内嵌的另外一个元素内或者mouseout情况下从内嵌的一个元素移动到注册元素时relatedTarget指向注册元素）并且注册元素不包含relatedTarget元素（原因与前一个语句类似）
-7. 将处理事件委托的函数挂载在handler对象的del属性上
-8. 生成最终被注册的proxy函数，它的通过函数的apply方法实际地调用了真正的回调函数，当函数实际的返回值为false时调用e.perventDefault和e.stopPropagation来禁用默认行为与停止事件传播，另外，它还对事件对象进行了扩展，下面会介绍到
-9. 在标识一个事件的handler对象上添加标识i，代表这个事件时这个元素通过Zepto.js注册的第几个事件，之后把handler放入set数组里
-10. 通过标准API addEventListener来监听事件
+add函数是注册事件的关键逻辑，内部通过调用addEventListener函数来注册事件。它接受七个参数，分别是：要监听的元素，要注册的事件列表，事件处理程序，附加的数据对象，进行事件委托时实际要监听的元素的选择器，事件委托函数，一个标识事件捕获的布尔值。函数的实现逻辑如下：
+* 设置或返回要注册事件的元素的_zid属性，它是handlers对象的键
+* 创建或返回一个保存该元素事件信息对象的数组set
+* 如果是ready事件，则在document上注册ready事件
+* 解析event字符串，返回一个包含事件信息的对象handler
+* 将回调函数与委托时的选择器挂载在handler上
+* 如果要注册的事件是mouseenter或者mouseleave，则用mouseover或者mouseout替代。如何替代？这里需要对回调函数进行包装，也就是设计一个逻辑判断只留下符合mouseenter与mouseleave的情况留下。首先获取事件对象的relatedTarget属性，之后如果related为假值，这个情况意味着鼠标是从浏览器外移动到监听元素里的，所以执行实际的回调函数。当relatedTarget存在时，要满足relatedTarget不为监听元素（因为在mouseover的情况下从注册元素移动到内嵌的另外一个元素内或者mouseout情况下从内嵌的一个元素移动到注册元素时relatedTarget指向注册元素）并且注册元素不包含relatedTarget元素（原因与前一个语句类似）
+* 将处理事件委托的函数挂载在handler对象的del属性上
+* 生成最终被注册的proxy函数，它的通过函数的apply方法实际地调用了真正的回调函数，当函数实际的返回值为false时调用e.perventDefault和e.stopPropagation来禁用默认行为与停止事件传播，另外，它还对事件对象进行了扩展，下面会介绍到
+* 在标识一个事件的handler对象上添加标识i，代表这个事件时这个元素通过Zepto.js注册的第几个事件，之后把handler放入set数组里
+* 通过标准API addEventListener来监听事件
 
 ``` JavaScript
 function remove(element, events, fn, selector, capture) {
