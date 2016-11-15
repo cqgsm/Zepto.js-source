@@ -1,4 +1,4 @@
- Zepto.js是jQuery.js在移动浏览器端的最知名的替代，有着和jQuery一样的API和大部分相同的表现。本篇文章将详细解释Zepto.jsZepto.js的源码工作细节——从整体结构到某个函数的实现。之所以细致地去追求理解它的源码，目的有二：一、学习JavaScript代码的编写与组织技巧；二、学习DOM操作技巧，加深对DOM接口的理解。 本篇文章讲解的是Zepto.js 1.2.0默认代码，不包含可选模块。
+ 尽管当下前端开发的技术栈中框架运用已经十分普遍，jQuery类的库正在衰落，不过jQuery中大量的DOM操作技巧并非变得无意义相反而是融入到了各个框架之中。Zepto.js是jQuery.js在移动浏览器端的最知名的替代，有着和jQuery一样的API和大部分相同的表现，同时它有少了很多用来兼容不同浏览器的代码，这使得它变得相当轻量，所以在现在阅读Zepto.js的代码相较于jQuery或许更有价值。本篇文章将详细解释Zepto.js的源码工作细节——从整体结构到某个函数的实现。之所以细致地去追求理解它的源码，目的有二：一、学习JavaScript代码的编写与组织技巧，了解一个库的开发中该有哪些考量与设计；二、学习DOM操作技巧，加深对DOM接口s的理解。 本篇文章讲解的是Zepto.js 1.2.0默认代码，不包含可选模块。
 # Zepto.js源码概况
 ## 代码逻辑结构
 Zepto.js的最外层是个典型的IIFE。
@@ -288,7 +288,7 @@ function isPlainObject(obj) {
       return isObject(obj) && !isWindow(obj) && Object.getPrototypeOf(obj)==Object.prototype
 }
 ```
-plainObject可以说是干净的对象，对象字面量就是干净的对象。它的原型必须是Object.prototype。
+plainObject可以说是纯粹的对象，对象字面量就是干净的对象。它的原型必须是Object.prototype。
 
 ``` JavaScript
 function likeArray(obj) {
@@ -378,7 +378,7 @@ function defaultDisplay(nodeName) {
 }
 ```
 
-获取某种元素的默认显示方式。实现方式是创建一个临时节点，插入body元素中，之后使用getComputedStyle获取display属性值。不过，其实这不能真正地获取默认display值，因为这会被样式表影响。这个函数用在原型show方法上，应该要考虑显示出来时该有的display。
+获取某种元素的默认显示方式。实现方式是创建一个临时节点，插入body元素中，之后使用getComputedStyle获取display属性值。不过，其实这不能真正地获取默认display值，因为这会被样式表影响。这个函数用在原型对象中的show方法上，因为要考虑显示出来时该有的display属性值。
 ``` JavaScript
  function children(element) {
       return 'children' in element ?
@@ -401,7 +401,7 @@ function defaultDisplay(nodeName) {
 Z函数是生成Zepto.js对象的构造函数。下面会讲到的$.fn是Z.prototype属性，也就是原型对象。
 
 ``` JavaScript
- Zepto.js.fragment = function(html, name, properties) {
+ Zepto.fragment = function(html, name, properties) {
       var dom, nodes, container
       if (singleTagRE.test(html)) dom = $(document.createElement(RegExp.$1))
 
@@ -428,7 +428,7 @@ Z函数是生成Zepto.js对象的构造函数。下面会讲到的$.fn是Z.proto
       return dom
  }
 ```
-Zepto.fragment是Zepto.js逻辑中的关键部分，当使用$('<div></div>')之类的语句时就是调用这个函数来实现创建DOM片段的。首先如果是简单标签，也就是非嵌套标签，则立即创建对应元素并执行$函数，否者，先获取最外层的标签名，通过之前创建的containers对象字符串写入合适的容器对象中，最后分别取出形成数组。另外，如果有properties对象的，将刚刚形成的DOM节点列表生成Zepto集合，再调用attr方法设置。最后返回。这里要注意：
+Zepto.fragment是Zepto.js逻辑中的关键部分，当使用$('<div></div>')之类的语句时就是调用这个函数来实现创建DOM片段的。首先如果是简单标签，也就是非嵌套标签，则立即创建对应元素并执行$函数，否则，先获取最外层的标签名，之后使用innerHTML注入字符串到合适的容器对象中，最后分别取出形成数组。另外，如果有properties对象的，将刚刚形成的DOM节点列表生成Zepto集合，再调用attr方法设置。最后返回。这里要注意：
 * 表格内部的标签只能存在与table及内部的如tbody标签内，否者只会留下空格换行节点，所以需要获取合适的父容器
 
 ``` JavaScript
@@ -443,7 +443,7 @@ Zepto.isZ = function(object) {
   return object instanceof Zepto.Z
 }
 ```
-通过instanceof操作符来判断对象是否是Zepto.js对象。
+通过instanceof操作符来判断对象是否是Zepto集合。
 
 ``` JavaScript
  Zepto.init = function(selector, context) {
@@ -516,7 +516,7 @@ $.extend = function(target) {
 将之前实现的extend函数进行封装，并暴露在$对象上。与extend函数相比，它利用数组的forEach方法来实现对多个对象拷贝的支持。
 
 ``` JavaScript
-Zepto.js.qsa = function(element, selector) {
+Zepto.qsa = function(element, selector) {
       var found,
         maybeID = selector[0] == '#',
         maybeClass = !maybeID && selector[0] == '.',
@@ -533,16 +533,16 @@ Zepto.js.qsa = function(element, selector) {
         )
    }
 ```
-这是Zepto.js的选择器函数，但使用$(selector)时调用的就是它。首先，Zepto.js.qsa检查了选择器的几个特征，包括是否是id选择器，或者类选择器，是否是简单的非复合选择器（这里指单个的id、class、tag并且命名常规的选择器）。这样，如果是简单的id选择器并且上下文支持getElementByID，则调用getElementById函数。之后排除掉不合理的上下文环境后，先是判断是否是简单的class选择器，再判断是否是简单的tag属性，最后仍未有结果就使用兼容性最强的querySelectorAll函数了。这里，要注意：
+这是Zepto的选择器函数，但使用$(selector)时调用的就是它。首先，Zepto.qsa检查了选择器的几个特征，包括是否是id选择器，或者类选择器，是否是简单的非复合选择器（这里指单个的id、class、tag并且命名常规的选择器）。这样，如果是简单的id选择器并且上下文支持getElementByID，则调用getElementById函数。之后排除掉不合理的上下文环境后，先是判断是否是简单的class选择器，再判断是否是简单的tag属性，最后仍未有结果就使用兼容性最强的querySelectorAll函数了。这里，要注意：
 * 文档片段不支持getElementByID函数，有些浏览器文档片段不支持getElementsByClassName函数，所以要进行判断
-* 使用id、class、tag选择器是出于性能的考虑。另外，Zepto.js.qsa函数只是原生API的简单封装，相比于jQuery的Sizzle选择器，它不支持特殊的选择方法，例如$('tr:odd')，它用来选择奇数索引的tr元素。
+* 使用id、class、tag选择器是出于性能的考虑。另外，Zepto.qsa函数只是原生API的简单封装，相比于jQuery的Sizzle选择器，它不支持特殊的选择方法，例如$('tr:odd')，它用来选择奇数索引的tr元素。
 
 ``` JavaScript
 function filtered(nodes, selector) {
       return selector == null ? $(nodes) : $(nodes).filter(selector)
 }
 ```
-通过选择器来筛选Zepto.js对象。
+通过选择器来筛选Zepto对象。
 
 ``` JavaScript
 $.contains = document.documentElement.contains ?
@@ -562,7 +562,7 @@ function funcArg(context, arg, idx, payload) {
       return isFunction(arg) ? arg.call(context, idx, payload) : arg
 }
 ```
-用来对arg参数进行封装，在arg参数是函数时，funcArg函数返回的就是arg函数以context参数作为上下文，idx和payload作为参数的执行结果。在Zepto.js原型里，很多可以接受函数作为参数，实现追加的方法就是使用这个函数实现的。例如：
+用来对arg参数进行封装，在arg参数是函数时，funcArg函数返回的就是arg函数以context参数作为上下文，idx和payload作为参数的执行结果。在Zepto原型里，很多可以接受函数作为参数，实现追加的方法就是使用这个函数实现的。例如：
 ```
 //html
 <p id="para">hello</p>
@@ -581,7 +581,7 @@ function setAttribute(node, name, value) {
       value == null ? node.removeAttribute(name) : node.setAttribute(name, value)
 }
 ```
-设置或移除节点的属性。
+设置或移除节点的属性。使用了原生的DOM操作方法removeAttribute和setAttribute。
 
 ``` JavaScript
  function className(node, value) {
@@ -618,7 +618,7 @@ function deserializeValue(value) {
       }
 }
 ```
-一个类型转换函数。规则请看注释。
+一个类型转换函数，用来将某些字符串转化为“更合理”的值。规则请看注释。
 
 ``` JavaScript
 $.type = type
@@ -647,7 +647,7 @@ $.isNumeric = function(val) {
         !isNaN(num) && isFinite(num) || false
 }
 ```
-判断某个值是否可以把它当成数字或者就是数字。
+判断某个值是否可以把它当成数字或者就是数字，这里去除了几个不常规的数字。
 
 ``` JavaScript
 $.inArray = function(elem, array, i) {
@@ -699,7 +699,7 @@ $.map = function(elements, callback) {
       return flatten(values)
 }
 ```
-$.map函数同过遍历elements对象和调用callback函数来计算新的数组，压平后返回。注意，$.map函数跳过null和undefined。
+$.map函数通过遍历对象和数组调用callback函数来计算新的对象或数组，压平后返回。注意，$.map函数跳过null和undefined。
 
 ``` JavaScript
 $.each = function(elements, callback) {
@@ -714,7 +714,7 @@ $.each = function(elements, callback) {
     return elements
 }
 ```
-$.each函数用来遍历elements对象，并把它们作为上下文执行callback，不过，如果callback返回false时立即终止遍历并返回elements。
+$.each函数用来遍历一个对象或数组，并把它们作为上下文执行callback，不过，如果callback返回false时立即终止遍历并返回调用它的对象或数组。
 
 ``` JavaScript
 $.grep = function(elements, callback) {
@@ -733,9 +733,9 @@ $.each("Boolean Number String Function Array Date RegExp Object Error".split(" "
       class2type["[object " + name + "]"] = name.toLowerCase()
     })
 ```
-在前面的type函数里，在对象上调用Object.prototype.toString函数后返回类似“[object Number]”的字符串，之后在class2type寻找对应的键的属性，即是该对象的类型。这里就填入了常见的类型。
+在前面的type函数里，在对象上调用Object.prototype.toString函数后返回类似“[object Number]”的字符串，之后在class2type寻找对应的键的属性，即是该对象的类型。这里就填入了常见的类型。所以在这里，JavaScript中的原生对象的类型都将得到一个“更精确”的结果，而浏览器宿主对象中的各类对象则都会统一返回object。
 
-到现在为止，核心模块的结构已经完整了，完成Zepto.js逻辑的对象已经构建完成，工具函数也添加了不少。不过Zepto.js原型对象还空空如也。接下来，我开始详解$.fn对象，它定义了除事件外的所有DOM操作。
+现在，核心模块的结构已经完整了，完成Zepto.js逻辑的对象已经构建完成，工具函数也添加了不少。不过Zepto.js原型对象还空空如也。接下来，我开始详解$.fn对象，它定义了除事件外的所有DOM操作。
 ``` JavaScript $.fn对象
 constructor: Zepto.js.Z
 ```
@@ -744,7 +744,7 @@ constructor属性引用Zepto.js.Z对象，表示一个Zepto.js对象是由Zepto.
 ``` JavaScript
 length: 0
 ```
-会被Zepto.js对象本身重写为正确的length。
+集合长度，之后会被重写为正确的length。
 
 ``` JavaScript
  forEach: emptyArray.forEach
@@ -766,7 +766,7 @@ concat: function() {
         return concat.apply(Zepto.js.isZ(this) ? this.toArray() : this, args)
 }
 ```
-concat函数将Zepto.js对象与函数参数使用数组的concat方法拼接在一起，注意，内部在Zepto.js对象上调用toArray方法变成数组，这样最终返回得结果就是一个数组而不是Zepto.js对象了。
+concat函数将Zepto对象与函数参数使用数组的concat方法拼接在一起，注意，内部在Zepto对象上调用toArray方法变成数组，这样最终返回得结果就是一个数组而不是Zepto集合了。
 
 ``` JavaScript
 map: function(fn) {
@@ -774,15 +774,16 @@ map: function(fn) {
           return fn.call(el, i, el)
         }))
 }
-``` 
-对之前说明的$.map函数进行包装使之成为原型上的方法。通过回调函数执行得到的数组会通过$函数转为一个新的Zepto.js对象。
+```
+对之前说明的$.map函数进行包装使之成为原型上的方法。通过回调函数执行得到的数组会通过$函数转为一个新的Zepto集合。
+
 
 ``` JavaScript
  slice: function() {
         return $(slice.apply(this, arguments))
  }
 ```
-获取Zepto.js对象的切片，结果仍为Zepto.js对象。
+获取Zepto集合的切片，结果仍为Zepto集合。
 
 ``` JavaScript
 ready: function(callback) {
@@ -798,7 +799,7 @@ ready函数接受一个函数为参数，它在readyState状态为complete或者
         return idx === undefined ? slice.call(this) : this[idx >= 0 ? idx : idx + this.length]
 }
 ```
-get函数用来提取Zepto.js对象里的元素。当不使用idx参数时返回包含所有元素的数组。但idx是负数是，idx+length获取实际下标。
+get函数用来提取Zepto集合里的元素。当不使用idx参数时返回包含所有元素的数组。当idx是负数是，idx+length获取实际下标。
 
 ``` JavaScript
 toArray: function() {
@@ -812,7 +813,7 @@ size: function() {
   return this.length
 }
 ```
-获取元素个数。
+获取集合中的元素个数。
 
 ``` JavaScript
 remove: function() {
@@ -822,7 +823,7 @@ remove: function() {
    })
 }
 ```
-在DOM树中移除这个Zepto.js对象中的元素。
+在DOM树中移除这个Zepto集合中的所有元素。
 
 ``` JavaScript
 each: function(callback) {
@@ -832,7 +833,7 @@ each: function(callback) {
         return this
 }
 ```
-each函数用来遍历Zepto.js集合，直到callback函数返回false为止。each函数是Zepto.js原型中涉及集合操作的函数的基础，所有涉及批量设置的方法内部都使用了each方法。其实这里可以不用数组的every函数实现,而是使用之前定义的$.each函数。如下：
+each函数用来遍历Zepto集合，直到callback函数返回false为止。each函数是Zepto.js原型中涉及集合操作的函数的基础，所有涉及批量设置的方法内部都使用了each方法。另外，其实这里可以不用数组的every函数实现,而是使用之前定义的$.each函数。如下：
 ``` JavaScript
 each:function(callback){
 	$.each(this,callback)
@@ -848,14 +849,14 @@ each:function(callback){
         }))
   }
 ```
-filter函数用来过滤Zepto.js对象，可以接受字符串或者函数。在函数情况下，通过not函数过滤出selector函数返回值不为真的元素集合，再对这个集合过滤一下，得到selector函数为真的情况下的集合。字符串情况下，使用之前说明过的Zepto.js.matches函数来判断。
+filter函数用来过滤Zepto集合，可以接受字符串或者函数。在函数情况下，通过not函数过滤出selector函数返回值不为真的元素集合，再对这个集合过滤一下，得到selector函数为真的情况下的集合。在字符串情况下，使用之前说明过的Zepto.matches函数来判断。
 
 ``` JavaScript
 add: function(selector, context) {
    return $(uniq(this.concat($(selector, context))))
 }
 ```
-扩展Zepto.js集合。注意，uniq用来去除重复的元素引用。
+扩展Zepto集合。注意，uniq用来去除重复的元素引用。
 
 ``` JavaScript
 is: function(selector) {
@@ -881,7 +882,7 @@ not: function(selector) {
         return $(nodes)
 }
 ```
-not函数用于在Zepto.js集合里选出与selector不匹配的元素。selector是函数时对函数返回值取反，获取不匹配的元素并放在数组中。字符串情况下，先获取符合该选取器的元素，之后用indexOf函数取反。类数组与NodeList的情况下，前者返回一个数组，后者返回一个Zepto.js集合，之后再用indexOf函数取反。
+not函数用于在Zepto集合里选出与selector不匹配的元素。selector是函数时对函数返回值取反，获取不匹配的元素并放在数组中。字符串情况下，先获取符合该选取器的元素，之后用indexOf函数取反。类数组与NodeList的情况下，前者返回一个数组，后者返回一个Zepto集合，之后再用indexOf函数取反。
 
 ``` JavaScript
 has: function(selector) {
@@ -892,14 +893,14 @@ has: function(selector) {
     })
  }
 ```
-判断当前对象集合的子元素是否有符合选择器的元素，或者是否包含指定的DOM节点，如果有，则返回新的对象集合，该对象过滤掉不含有选择器匹配元素或者不含有指定DOM节点的对象。在上文的isObject函数实现里，元素节点作为参数将返回true。
+判断当前对象集合的子元素是否有符合选择器的元素，或者是否包含指定的DOM节点，如果有，则返回新的对象集合，函数内部$.contains方法过滤掉不含有选择器匹配元素或者不含有指定DOM节点的对象。在上文的isObject函数实现里，元素节点作为参数将返回true。
 
 ``` JavaScript
  eq: function(idx) {
         return idx === -1 ? this.slice(idx) : this.slice(idx, +idx + 1)
  }
 ```
-返回新Zepto.js集合，包含通过索引获取Zepto.js集合元素。
+返回新Zepto集合，包含通过索引获取Zepto集合元素。
 
 ``` JavaScript
 first: function() {
@@ -931,7 +932,7 @@ find: function(selector) {
     return result
 }
 ```
-find函数相当常用，用来在当前Zepto.js集合里筛选出新的Zepto.js集合。在selector是对象的情况下（指元素节点）先获取selector匹配的Zepto.js集合，之后对这个集合进行filter操作，将每个元素和调用find函数的Zepto.js集合进行匹配，只要这个集合中的元素能在调用find方法中的Zepto.js集合中找到，则过滤成功，并过滤下一个。selector是选择器时，通过map函数和Zepto.js.qsa搜寻。
+find函数相当常用，用来在当前Zepto集合里筛选出新的Zepto集合。在selector是对象的情况下（指元素节点）先获取selector匹配的Zepto集合，之后对这个集合进行filter操作，将每个元素和调用find函数的Zepto集合进行匹配，只要这个集合中的元素能在调用find方法中的Zepto集合中找到，则过滤成功，并过滤下一个。selector是选择器时，通过map函数和Zepto.qsa搜寻。
 
 ``` JavaScript
  closest: function(selector, context) {
@@ -945,7 +946,7 @@ find函数相当常用，用来在当前Zepto.js集合里筛选出新的Zepto.js
         return $(nodes)
  }
 ```
-closet函数用来寻找Zepto.js集合中符合selector和context的与当前Zepto.js集合元素最近的元素。这里使用了while循环来不断往祖先方向移动。另外还有排除掉重复的引用，因为有可能搜寻到相同的祖先元素。
+closet函数用来寻找Zepto集合中符合selector和context的与当前Zepto集合元素最近的元素。这里使用了while循环来不断往祖先方向移动。另外还有排除掉重复的引用，因为一个集合中的元素有可能有相同的祖先元素。
 
 ``` JavaScript
  parents: function(selector) {
@@ -961,14 +962,14 @@ closet函数用来寻找Zepto.js集合中符合selector和context的与当前Zep
         return filtered(ancestors, selector)
  }
 ```
-获取Zepto.js集合内每个元素的所有祖先元素。函数内部维护了一个nodes数组用来保存所有结果，另外同样使用while函数来层层递进。
+获取Zepto集合内每个元素的所有祖先元素。函数内部维护了一个nodes数组用来保存所有结果，另外和closest函数一样同样使用while函数来层层递进。
 
 ``` JavaScript
 parent: function(selector) {
         return filtered(uniq(this.pluck('parentNode')), selector)
 }
 ```
-parent函数用来返回由Zepto.js元素的父元素组成的Zepto.js集合。它内部使用的pluck方法，这个方法用来获取一个Zepto.js集合中每个元素的某个属性值组成的Zepto.js集合。另外，parent函数还进行了去重与过滤。
+parent函数用来返回由Zepto元素的父元素组成的Zepto集合。它内部使用的pluck方法，这个方法用来获取一个Zepto集合中每个元素的某个属性值组成的Zepto集合。另外，parent函数还进行了去重与过滤。
 
 ``` JavaScript
 children: function(selector) {
@@ -977,7 +978,7 @@ children: function(selector) {
      }), selector)
  }
 ```
-返回由Zepto.js集合中每个元素的后代元素组成的Zepto.js集合，可以筛选。函数内部使用children函数来获取元素的后代元素。
+返回由Zepto集合中每个元素的后代元素组成的Zepto集合，可以筛选。函数内部使用之前定义的children函数来获取元素的后代元素。
 
 ``` JavaScript
 contents: function() {
@@ -986,7 +987,7 @@ contents: function() {
     })
  }
 ```
-返回Zepto.js集合中的元素的后代节点。对于frame，则获取它的contentDocument属性，contentDocument返回这个窗体的文档节点。
+返回Zepto集合中的元素的后代节点。对于frame，则获取它的contentDocument属性，contentDocument返回这个窗体的文档节点。
 
 ``` JavaScript
 siblings: function(selector) {
@@ -997,14 +998,14 @@ siblings: function(selector) {
         }), selector)
  }
 ```
-获取Zepto.js集合的同辈元素。实现逻辑是获取元素的父元素再取出父元素的子元素，之后使用“child!==el”来去除先前的元素。另外，形成新的Zepto.js集合时使用了filtered函数来过滤集合。
+获取Zepto集合的同辈元素。实现逻辑是获取元素的父元素再取出父元素的子元素，这样得到的集合就由父元素的所有子元素组成，之后使用“child!==el”来去除先前的元素。另外，形成新的Zepto集合时使用了filtered函数来过滤集合。
 
 ``` JavaScript
  empty: function() {
         return this.each(function() { this.innerHTML = '' })
  }
 ```
-删除Zepto.js集合中每个元素的后代节点。这里直接使用的innerHTML而无需使用removeChild方法。
+删除Zepto集合中每个元素的后代节点。这里直接使用更高效的innerHTML方法而非removeChild方法。
 
 ``` JavaScript
 pluck: function(property) {
@@ -1024,14 +1025,14 @@ pluck方法返回集合中每个元素的某个属性。上面的parent函数就
         })
  }
 ```
-show函数用来让元素显示（还原成“默认样式”）。实现逻辑是如果内联display属性为none，则使用“style.display=""”去除内联的值为none的display属性。实际上，使用style.propertyName=""或style.propertyName=""将让该对应内联样式失效。接下来对计算样式进行判断，如果仍为none的话则将样式还原为“默认样式”。注意，这里只针对对display为none的情况。
+show函数用来让元素显示成“默认样式”。实现逻辑是如果内联display属性为none，则使用“style.display=""”去除内联的值为none的display属性。实际上，使用style.propertyName=""或style.propertyName=""可以让对应内联样式失效。接下来对计算样式进行判断，如果仍为none的话则将样式还原为“默认样式”。
 
 ``` JavaScript
  replaceWith: function(newContent) {
         return this.before(newContent).remove()
  }
 ```
-将Zepto.js集合中的元素替换成newContent。这里通过在元素前插入newContent后再移除元素完成。
+将Zepto集合中的元素替换成newContent。这里通过在元素前插入newContent后再移除元素完成。
 
 
 ``` JavaScript
@@ -1046,7 +1047,7 @@ show函数用来让元素显示（还原成“默认样式”）。实现逻辑�
         return this
  }
 ```
-wrapAll函数用来将Zepto.js集合中的元素包裹在一个html片段或者DOM元素中。实现方式是先在集合中的第一个元素前插入structure生成的元素，之后遍历这个元素获取它的最内层DOM，之后使用Zepto.js原型中的append方法将Zepto.js集合中的元素移动到刚刚获取的最里层元素中。
+wrapAll函数用来将Zepto集合中的元素包裹在一个html片段或者DOM元素中。实现方式是先在集合中的第一个元素前插入structure生成的元素，之后遍历这个元素获取它的最里层元素，之后使用Zepto原型中的append方法将Zepto集合中的元素移动到刚刚获取的最里层元素中。
 
 ``` JavaScript
 wrap: function(structure) {
@@ -1063,7 +1064,7 @@ wrap: function(structure) {
      })
   }
 ```
-wrap方法用来包裹每个Zepto.js集合中的元素，内部使用了wrapAll方法和Zepto.js集合的遍历操作来包裹每个元素。注意， “clone = dom.parentNode || this.length > 1”用来判断structure是否要克隆，dom.parentNode存在意味着structure已经在文档之中了，这是应该将它克隆，不然会插入到已经存在structure之中，另外，Zepto.js集合中的元素多余一个时，也就是将有多个元素被包裹时也要进行克隆。
+wrap方法用来包裹每个Zepto集合中的元素，内部使用了wrapAll方法和Zepto集合的遍历操作来包裹每个元素。注意， “clone = dom.parentNode || this.length > 1”用来判断structure是否要克隆，dom.parentNode存在意味着structure已经在文档之中了，这时应该将它克隆，不然会插入到已经存在structure之中，另外，Zepto集合中的元素多于一个时，也就是将有多个元素被包裹时也要进行克隆。
 
 ``` JavaScript
 wrapInner: function(structure) {
@@ -1076,7 +1077,7 @@ wrapInner: function(structure) {
         })
 }
 ```
-wrapInner用来将Zepto.js集合中的每个元素的后代节点包裹起来。内部先使用contents方法获取Zepto.js集合中某个元素的后代节点，之后如果后代节点存在则使用wrapAll方法将它包裹，否则直接插入structure。
+wrapInner用来将Zepto集合中的每个元素的后代节点包裹起来。内部先使用contents方法获取Zepto集合中元素的后代节点，之后如果后代节点存在则使用wrapAll方法将它包裹，否则直接插入structure。
 
 ``` JavaScript
 unwrap: function() {
@@ -1086,7 +1087,7 @@ unwrap: function() {
      return this
  }
 ```
-移除包裹结构。实现原理是遍历Zepto.js集合中的父元素，将它们替换成它们的后代节点。
+移除包裹结构。实现原理是遍历Zepto集合中的父元素，将它们替换成它们的后代节点。
 
 ``` JavaScript
  clone: function() {
@@ -1095,7 +1096,7 @@ unwrap: function() {
      })
   }
 ```
-将Zepto.js集合中的元素克隆一份。这里利用了cloneNode函数，当它的参数为true是表示将时间监听也克隆一份。
+将Zepto集合中的元素克隆一份。这里利用了cloneNode函数，当它的参数为true是表示事件监听也会被克隆。
 
 ``` JavaScript
  hide: function() {
@@ -1112,7 +1113,7 @@ toggle: function(setting) {
         })
  }
 ```
-toggle函数接受一个参数，但参数为真时将Zepto.js集合显示，反之隐藏。这里通过show方法与hide方法实现显示与隐藏。另外，“(setting === undefined ? el.css("display") == "none" : setting)”存在冗余，所以toggle函数应该这样实现：
+toggle函数接受一个参数，但参数为真时将Zepto集合显示，反之隐藏。这里通过show方法与hide方法实现显示与隐藏。另外，“(setting === undefined ? el.css("display") == "none" : setting)”存在冗余，所以toggle函数应该这样实现：
 ``` JavaScript
 toggle: function(setting) {
         return this.each(function() {
@@ -1130,7 +1131,7 @@ toggle: function(setting) {
         return $(this.pluck('nextElementSibling')).filter(selector || '*')
   }
 ```
-prev与next方法通过分别获取集合中每个元素的上一个元素与下一个元素来放回新的Zepto.js集合。这里使用pluck函数来获取新集合，使用filter函数进行筛选。
+prev与next方法通过分别获取集合中每个元素的上一个元素与下一个元素来放回新的Zepto集合。这里使用pluck函数来获取新集合，使用filter函数进行筛选。
 
 ``` JavaScript
  html: function(html) {
@@ -1154,7 +1155,7 @@ text: function(text) {
           (0 in this ? this.pluck('textContent').join("") : null)
    }
 ```
-text函数的使用与内部实现与html函数类似，不同点在于当获取textContent时采用了join方法来拼接字符串,这意味着它会将整个Zepto.js集合中各个元素的textContent连接起来一并返回。
+text函数的使用与内部实现与html函数类似，不同点在于当获取textContent时采用了join方法来拼接字符串,这意味着它会将整个Zepto集合中各个元素的textContent连接起来一并返回。
 
 ``` JavaScript
  attr: function(name, value) {
@@ -1264,7 +1265,7 @@ offset: function(coordinates) {
         }
   }
 ```
-offset方法用来获取元素的位置与大小信息。在获取操作中，如果元素尚未在DOM中则返回“{top:0,left:0}”,否则先是通过“getBoundingClientRect”方法获取元素相对于视口的位置属性，之后加上页面滚动的偏移量就得到元素相对于文档的位置了。对于设置的情况，遍历每个元素，获取它的父元素的offset属性，之后将要设置的偏移位置减去父元素的偏移位置就能得到实际应该设置的left与top属性。
+offset方法用来获取元素的位置与大小信息。在获取操作中，如果元素尚未在DOM中则返回“{top:0,left:0}”,否则先是通过getBoundingClientRect方法获取元素相对于视口的位置属性，之后加上页面滚动的偏移量就得到元素相对于文档的位置了。对于设置的情况，遍历每个元素，获取它的父元素的offset属性，之后将要设置的偏移位置减去父元素的偏移位置就能得到实际应该设置的left与top属性。
 
 ``` JavaScript
  css: function(property, value) {
@@ -1312,7 +1313,7 @@ index: function(element) {
         return element ? this.indexOf($(element)[0]) : this.parent().children().indexOf(this[0])
  }
 ```
-获取某个元素在Zepto.js集合中的索引，或者获取集合中第一个元素在相邻元素中的索引。
+获取某个元素在Zepto集合中的索引，或者获取集合中第一个元素在相邻元素中的索引。
 
 ``` JavaScript
  hasClass: function(name) {
@@ -1525,46 +1526,52 @@ offsetParent: function() {
         return this
       }
   })
-  ```
-  这段代码用来为原型生成after，prepend等八个与在不同位置插入元素相关的方法。adjacencyOperator变量为['after', 'prepend', 'before', 'append']，这样，通过 var inside = operatorIndex % 2 就可以区分出这四个操作是“内部操作”还是“外部操作”，所谓“外部操作”指的是对发起这个操作的元素的相邻方向进行的操作，就是after与before，而“内部操作”指的是对发起操作的元素的子元素集合进行的操作，就是append与prepend。比如，after在数组中的索引是0，这样inside就是0，这表示after操作是外部操作。接下来，先获取参数返回一个包含即将要被插入的元素的集合，之后便是运用原生的insertBefore方法进行操作了。如何操作？第一，获取不同的parent元素，比如，当进行after插入时，parent元素的就是进行after操作的元素的父元素。第二，获取一个合适的元素作为insertBefore的第二个参数。于是，比如执行$('<p id="foo"></p').after('<p id="bar"></p>')，先是获取#foo的父元素作为insertBefore的调用上下文，获取#foo的nextSibling作为insertBefore的第二个参数，这样就可以在#foo之后插入#bar了。特殊地，当你插入script元素时，script插入后会被立即执行，此外，要把“</script>”写为“<\/script>”，因为前者会被解析错误。其实这里对脚本的处理只是一种当用户非要使用时的一种兼容，插入脚本的良好实现应该是在head标签内插入。这里说完了after，prepend， before，append的实现，对于另外四个方向的操作，实现的内部将它们进行相反调用即可。
+
+```
+
+  这段代码用来为原型生成after，prepend等八个与在不同位置插入元素相关的方法。在DOM标准中，存在insertBefore方法来进行插入操作。所以，这八个方法都是改变insertBefore的调用元素和后一个参数来做到的。具体来说：
+  * adjacencyOperator变量为['after', 'prepend', 'before', 'append']，这样，通过 var inside = operatorIndex % 2 就可以区分出这四个操作是“内部操作”还是“外部操作”，所谓“外部操作”指的是对发起这个操作的元素的相邻方向进行的操作，就是after与before，而“内部操作”指的是对发起操作的元素的子元素集合进行的操作，就是append与prepend。比如，after在数组中的索引是0，这样inside就是0，这表示after操作是外部操作。接下来，先获取参数返回一个包含即将要被插入的元素的集合，之后便是运用原生的insertBefore方法进行操作了。
+  * 如何操作？第一，获取不同的parent元素，比如，当进行after插入时，parent元素的就是进行after操作的元素的父元素。第二，获取一个合适的元素作为insertBefore的第二个参数。于是，比如执行$('<p id="foo"></p').after('<p id="bar"></p>')，先是获取#foo的父元素作为insertBefore的调用上下文，获取#foo的nextSibling作为insertBefore的第二个参数，这样就可以在#foo之后插入#bar了。
+  * 特殊地，当你插入script元素时，script插入后会被立即执行，此外，要把“</script>”写为“<\/script>”，因为前者会被解析错误。其实这里对脚本的处理只是一种当用户非要这样使用时的一种兼容，插入脚本的良好实现应该是在head标签内插入。
+  * 这里说完了after，prepend，before，append的实现，对于另外四个方向的操作，实现的内部将它们进行相反调用即可。
 
 ``` JavaScript
- Zepto.js.Z.prototype = Z.prototype = $.fn
-    Zepto.js.uniq = uniq
-    Zepto.js.deserializeValue = deserializeValue
-    $.Zepto.js = Zepto.js
+ Zepto.Z.prototype = Z.prototype = $.fn
+    Zepto.uniq = uniq
+    Zepto.deserializeValue = deserializeValue
+    $.Zepto = Zepto
 
     return $
   })()
   
- //这里的Zepto.js就是刚刚返回的$
- window.Zepto.js = Zepto.js
- window.$ === undefined && (window.$ = Zepto.js)
+ //这里的Zepto就是刚刚返回的$
+ window.Zepto = Zepto
+ window.$ === undefined && (window.$ = Zepto)
 ```
-将形成的原型对象$.fn为挂载在Z.prototype与Zepto.js.Z.prototype上，将两个方法挂载在Zepto.js对象上，最后把Zepto.js挂载在$入口函数上，并返回$，最终把入口函数挂载在window对象上。至此，Zepto.js库的核心部分——主体结构与DOM除事件外的操作已经完成。
+将形成的原型对象$.fn为挂载在Z.prototype与Zepto.Z.prototype上，将两个方法挂载在Zepto对象上，最后把Zepto挂载在$入口函数上，并返回$，最终把入口函数挂载在window对象上。至此，Zepto.js库的核心部分——主体结构与DOM除事件外的操作已经完成。
 
 ## 事件模块
-事件模块是jQuery，Zepto.js之类的库广受欢迎的另一个原因，它为开发者提供了简洁的API来注册事件，虽然Zepto.js的使用主要分布在现代浏览器，尤其是移动浏览器上，它们往往遵循标准API，但对它们进行进一步封装仍有必要。对于Zepto.js的事件封装逻辑，可以先从以下几个函数了解：
+事件模块是jQuery，Zepto之类的库广受欢迎的另一个原因，它为开发者提供了简洁的API来注册事件，虽然Zepto的使用主要分布在现代浏览器，尤其是移动浏览器上，它们往往遵循标准API，但对它们进行进一步封装仍有必要。对于Zepto的事件封装逻辑，可以先从以下几个函数了解：
 * $.fn.on 它挂载在Zepto.js原型对象上，是我们注册事件的入口函数
 * add函数 它在$.fn.on方法中被调用，内部调用了标准的addEventListener函数来监听事件
 * $.fn.off 它挂载在Zepto.js原型对象上，是移除事件的入口函数
 * remove函数 他在$.fn.off中使用，内部调用了removeEventListener函数来解除事件监听
-* handlers对象，它用来保存所有使用Zepto.js库来监听事件的元素及事件的引用
-另外，真正使用addEventListener函数注册的事件处理函数并不是使用on函数时传入的回调函数，在事件模块的内部，真正的回调函数在一个代理函数中执行，这也是实现通过return false来禁用默认事件与停止事件传播功能的关键。
+* handlers对象，它用来保存所有使用Zepto库来监听事件的元素及事件的引用
+另外，真正使用addEventListener函数注册的事件处理函数并不是使用on函数时传入的回调函数，在事件模块的内部，真正的回调函数在一个代理函数中执行，这也是实现通过返回false来禁用默认事件与停止事件传播功能的关键。
  现在举个简单的例子：
 ``` JavaScript
 $('body').on('click',function(){
 	console.log('body clicked')
 })
 ```
-这里$函数获取了包含body元素的Zepto.js集合，之后调用原型上的on方法，传入了“click”与事件处理函数两个参数，接着这两个参数再次作为参数传入add函数中，add函数接着被调用进而完成事件监听。这里只是大概介绍逻辑，事件模块其实会做相当多的处理的。另外，事件模块中远不止前面几个函数，逻辑比较复杂。接下里，我会完整解释事件模块源码。
+这里$函数获取了包含body元素的Zepto集合，之后调用原型上的on方法，传入了“click”与事件处理函数两个参数，接着这两个参数再次作为参数传入add函数中，add函数接着被调用进而完成事件监听。这里只是大概介绍逻辑，事件模块其实会做相当多的处理的,远不止前面几个函数，逻辑比较复杂。接下里，我会完整解释事件模块源码。
 
 ``` JavaScript
 ;
 (function($){
-}(Zepto.js))
+}(Zepto))
 ```
-这是事件模块的模块形式，之前核心模块返回的入口函数$被赋值给Zepto.js，现在Zepto.js变量作为事件模块参数传入，这样在事件模块中就可以直接使用$来调用Zepto.js入口函数而不用考虑挂载在window对象上的是$还是Zepto.js。开头的分号用来结束之前的语句防止错误调用。
+这是事件模块的模块形式，之前核心模块返回的入口函数$被赋值给Zepto，现在Zepto变量作为事件模块参数传入，这样在事件模块中就可以直接使用$来调用Zepto入口函数而不用考虑挂载在window对象上的是$还是Zepto。
 
 ``` JavaScript
  var _zid = 1,
@@ -1580,13 +1587,13 @@ $('body').on('click',function(){
       focus = { focus: 'focusin', blur: 'focusout' },
       hover = { mouseenter: 'mouseover', mouseleave: 'mouseout' }
 ```
-声明很多变量。其中,_zid用来为注册事件的元素添加一个属性来标识唯一性，这里先初始化为1，handlers对象保存通过事件模块注册的事件与元素的应用，便于维护，比如你为body元素注册了三个事件，这样handlers对象就可能为：
+这部分代码声明了很多变量。其中,_zid用来为注册事件的元素添加一个属性来标识唯一性，这里先初始化为1，handlers对象保存通过事件模块注册的事件与元素的应用，便于维护，比如你为body元素注册了三个事件，这样handlers对象就可能为：
 ``` JavaScript
 {
 1:[{},{},{}]//每个事件对应一个对象，对象里包含回调函数，选择器等属性
 }
 ```
-focusinSupported标示浏览器是否支持focusin事件，则在后面用来特殊地处理focus与blur事件。focus与hover对象分别保存了几对相似的对象，接下来Zepto.js会尝试用属性值代表的事件代替属性名表示的事件，因为属性名表示的事件不支持冒泡，需要对它们修复。
+focusinSupported标示浏览器是否支持focusin事件。这在之后会说到，简单来说需要用focusin来替代focus事件。
 
 ``` JavaScript
 specialEvents.click = specialEvents.mousedown = specialEvents.mouseup = specialEvents.mousemove = 'MouseEvents'
@@ -1643,19 +1650,20 @@ eventCapture函数返回一个布尔值，在注册事件的过程中标识是�
 	<div id="box"></div>
 </body 
 ```
+
 ``` JavaScript
 $('body').on('click','#box',function(ev){
 	console.log('body clicked');
 })
-```
-这样，当body上触发click时会判断事件对象的target属性是否指向#box元素，如果是则触发事件，这样就将#box上的click事件托管在了body元素上。但是，对于focus事件，它并不会冒泡，于是，如果事件代理还是通过在冒泡阶段注册那祖先’对象将接收不到事件，因此无法完成事件代理。另外，focusin与focusout事件会冒泡，于是如果浏览器支持它们的话就仍在冒泡阶段处理代理，之后的逻辑中会把focus与blur事件替换成focusin与focusout。
+``
+这样，当body上触发click时会判断事件对象的target属性是否指向#box元素，如果是则触发事件，这样就将#box上的click事件托管在了body元素上。但是，对于focus事件，它并不会冒泡，于是，如果事件代理还是通过在冒泡阶段注册那祖先对象将接收不到事件，因此无法完成事件代理。另外，focusin与focusout事件会冒泡，于是如果浏览器支持它们的话就仍在冒泡阶段处理代理，之后的逻辑中会把focus与blur事件替换成focusin与focusout。
 
 ``` JavaScript
 function realEvent(type) {
       return hover[type] || (focusinSupported && focus[type]) || type
 }
 ```
-返回真正要注册的事件。比如前面提到的将focus与blur替换成focusin与focusout。另外Zepto.js也把mouseenter与mouseleave事件替换成mouseover与mouseleave事件，原因同样前两者不支持冒泡。不是前面四中的直接返回。
+revlEvent函数返回真正要注册的事件。比如前面提到的将focus与blur替换成focusin与focusout。另外Zepto也把mouseenter与mouseleave事件替换成mouseover与mouseleave事件，原因同样是前两者不支持冒泡。其他事件类型直接返回。
 
 ``` JavaScript
 function add(element, events, fn, data, selector, delegator, capture) {
