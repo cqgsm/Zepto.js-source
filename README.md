@@ -1749,7 +1749,7 @@ $.proxy = function(fn, context) {
       }
     }
 ```
-$.proxy是一个工具函数与Zepto.js事件系统没有关系，功能是让函数的的上下文固定。函数通过传入函数fn和上下文对象context返回一个proxyFn函数，接下来直接调用proxyFn，这样fn就会在context的上下文下执行。函数内部通过Function.prototype上的apply函数实现。另外$.proxy函数支持对象与对象中的方法名作为参数调用。
+$.proxy是一个工具函数与Zepto的事件系统没有关系，功能是让函数的的上下文固定。函数通过传入函数fn和上下文对象context返回一个proxyFn函数，接下来直接调用proxyFn，这样fn就会在context的上下文下执行。函数内部通过Function.prototype上的apply函数实现。另外$.proxy函数支持对象与对象中的方法名作为参数调用。
 
 ``` JavaScript
 $.fn.bind = function(event, data, callback) {
@@ -1762,7 +1762,7 @@ $.fn.unbind = function(event, callback) {
       return this.on(event, selector, data, callback, 1)
  }
 ```
-对on方法进行简易封装，生成更特殊的bind，unbind和one方法。
+对on方法进行简易封装，生成更特殊的bind，unbind和one方法。它们接受的参数个数少些，功能也就少些。
 
 ``` JavaScript
 var returnTrue = function() {
@@ -1778,7 +1778,7 @@ var returnTrue = function() {
         stopPropagation: 'isPropagationStopped'
       }
  ```
-声明两个函数用来返回布尔值，这在下面的compatible函数里会用到、ignoreProperties用来对原生的event对象进行过滤、eventMethods对象在下面的compatible函数中用到。
+声明两个函数用来返回布尔值，这在下面的compatible函数里会用到。ignoreProperties用来对原生的event对象进行过滤、eventMethods对象在下面的compatible函数中用到。
 
  ``` JavaScript
  function compatible(event, source) {
@@ -1807,7 +1807,7 @@ var returnTrue = function() {
  ```
  
 compatible函数用来对事件对象进行兼容性扩展。先是遍历eventMethods对象，获取类似preventDefault和isDefaultPrevented这样的键值对，这样就可以对原有的preventDefault、stopImmediatePropagation、stopPropagation三个方法进行重写，当这三个方法调用时，先把以is为前缀的判断方法是否执行过的方法重写为返回true的函数，之后才调用原来的方法。这样就让preventDefault、stopImmediatePropagation、stopPropagation与isPreventDefault、isImmediatePropagation和isPropagationStopped关联起来。
-接着，compatible函数还对不支持event.timeStamp的浏览器进行了修复，不过event.timeStamp与Date.now()完全不同。compatible函数的最后检查了原事件是否处于禁用默认行为的状态，如果是则将isDefaultPrevented重写为returnTrue。
+接着，compatible函数还对不支持event.timeStamp的浏览器进行了修复，不过标准中的event.timeStamp与Date.now()完全不同。compatible函数的最后检查了原事件是否处于禁用默认行为的状态，如果是则将isDefaultPrevented重写为returnTrue。
 
 ``` JavaScript
 function createProxy(event) {
@@ -1818,7 +1818,7 @@ function createProxy(event) {
       return compatible(proxy, event)
   }
 ```
-在使用事件委托时，将原先事件对象传入createProxy函数返回一个新的事件对象，在新事件对象中使用originalEvent属性保存对原先对象的引用并且拷贝了原有事件对象的属性与方法。另外，函数内部过滤掉了一些没有的属性。
+在使用事件委托时，将原先事件对象传入createProxy函数返回一个新的事件对象，在新事件对象中使用originalEvent属性保存对原先对象的引用并且拷贝了原有事件对象的属性与方法。另外，函数内部过滤掉了一些没有用的属性。
 
 ```JavaScript
 $.fn.delegate = function(selector, event, callback) {
@@ -1837,7 +1837,7 @@ $.fn.undelegate = function(selector, event, callback) {
       return this
   }
 ```
-封装四个我们常用的事件行为，分别是事件委托与事件委托的移除，在body元素上委托事件和它的解除。
+封装四个我们常用的事件行为，分别是事件委托与事件委托的解除，在body元素上委托事件和它的解除。
 
 ``` JavaScript
 $.fn.on = function(event, selector, data, callback, one) {
@@ -1960,18 +1960,20 @@ $.Event = function(type, props) {
 ```
 $.Event函数通过封装document.createEvent和event.initEvent函数提供了一个方便创建模拟事件对象的API。它在$.fn.trigger函数中就被用到。其中要注意的是document.createEvent函数接受事件名称来创建事件对象，这里应该提供更明确的事件名，比如“MouseEvents”。
 
+在前面的代码中我们可以看到，Zepto内部维护一个对象来保存所以通过Zepto注册的事件，实际上就是一个发布订阅模式的实现。在后面的Ajax模块中，Zepto的事件功能还会被用到。
+
 
 ## Ajax模块
  Ajax模块通过对浏览器原生的XMLHttpRequest和JSONP技术进行封装从而提供一个更易用且兼容性更强的API，具体表现在：
 * 易用的API
 * 根据类型设置对返回的数据进行二次处理
 * 和jQuery一样，对JSONP技术有着良好的支持
-Ajax的模块原理大致来说就是根据开发者提供的配置对象获取类似URL之类的信息，从而发起请求，并注册一个较为复杂的readystatechange事件，将配置对象中的各类回调函数放在不同的条件分支下执行。另外，为了兼容性，Ajax模块并未使用XHR 2级API，这导致了它处理二进制文件的不便。
+ajax的模块原理大致来说就是根据开发者提供的配置对象获取类似URL之类的信息，从而发起请求，并注册一个回调函数众多的readystatechange事件，将配置对象中的各类回调函数放在不同的条件分支下执行。另外，为了兼容性，Ajax模块内部并未封装responseType属性，这导致了它处理二进制文件的不便。Zepto.js提供了Deferred模块，它提供了类似promise的接口，不过接下来我将不做介绍。
 
 ``` JavaScript
 ;
 (function($){
-})(Zepto.js)
+})(Zepto)
 ```
 与其他模块类似，Ajax模块仍然以IIFE的形式存在。
 
@@ -1989,10 +1991,10 @@ var jsonpID = +new Date(),
       originAnchor = document.createElement('a')
 ```
 一系列的变量声明。作用是：
-* jsonp：生成一个时间戳，用来当发起jsonp请求但未指定回调函数名称时形成一个唯一的回调函数名称，使用时间戳可以保证唯一。在发起多次jsonp请求时，后续只要在时间戳上不断自增就行
+* jsonpID：生成一个时间戳，用来当发起jsonp请求但未指定回调函数名称时形成一个唯一的回调函数名称，使用时间戳可以保证唯一。在发起多次jsonp请求时，后续只要在时间戳上不断自增就行
 * rscript用来匹配script标签及其内容。在$.load函数里，需要对请求返回的script过滤掉，只留下正常内容
 
-接下的几个是几种MIME类型，之后的originAnchor指向一个a元素，之后被用来检测是否跨域。
+接下的几个是几种MIME类型，之后的originAnchor指向一个a元素，之后会被用来检测是否跨域。
 
 ``` JavaScript
 originAnchor.href = window.location.href
@@ -2006,7 +2008,7 @@ originAnchor.href = window.location.href
       return !event.isDefaultPrevented()
  }
 ```
-用于在指定上下文触发指定事件。
+用于在指定上下文触发指定事件。注意，在Ajax模块中，一些逻辑会使用前面讲解过的事件模块来发布一些事件。比如请求开始和结束阶段。
 
 ``` JavaScript
   function triggerGlobal(settings, context, eventName, data) {
@@ -2041,7 +2043,7 @@ function ajaxStart(settings) {
       triggerGlobal(settings, context, 'ajaxSend', [xhr, settings])
  }
 ```
-调用Ajax配置中的beforeSend函数，之后尝试触发ajaxBeforeSend和ajaxSend事件，因为开发者对Ajax请求的设定可能不同，可能将不会触发它们。在Ajax发送请求前一刻将调用它。
+调用Ajax配置中的beforeSend函数，之后尝试触发ajaxBeforeSend和ajaxSend事件，因为开发者对Ajax请求的设定可能不同，可能将不会触发它们。Ajax模块在Ajax发送请求前一刻将调用它。
 
 ``` JavaScript
 function ajaxSuccess(data, xhr, settings, deferred) {
@@ -2146,16 +2148,16 @@ $.ajaxJSONP = function(options, deferred) {
   }
 ```
 $.ajaxJSONP函数用来完成JSONP请求。一个常见JSONP URL如http://coolshell.cn/t.php?n=10&callback=print，当发出如上请求时，将返回文本print(result)。所以将URL作为一个script元素的src属性并插入DOM中就会返回文本print(result)，它将作为js代码调用，最终浏览器将执行print(result)，这样就完成了一个JSONP的请求。而$.ajaxJSONP函数就对这些过程进行了封装。主要逻辑是：
-1. 如果请求对象过于简略，进入$.ajax函数，并在$.ajax函数内部重写进入$.ajaxJSONP调用
-2. 如果没有指定回调函数名称jsonpCallback，使用之前定义的jsonp变量作为回调函数名并自增为下一次使用做准备
-3. 获取与回调函数名称相同的全局函数，之后会被重写
-4. 定义函数abort，这样当请求事件超时后将调用它进而触发error事件
-5. 定义一个xhr对象，在发出请求会返回，引用了abort函数，注意这里只是为了API风格一致，JSONP和XMLHttpRequest没有关系
-6. 监听刚刚创建的scrip标签的load和error事件，请求成功后将调用ajaxSuccess函数
-7. 重写与回调函数同名的全局函数，将它获取的参数对象赋值给responseData，假定请求返回的脚本会执行print(result)，result为数据，这样就会将result保存至responseData变量。
-8. 将URL带上回调函数，比如上面提到的URL使用时作为URL参数是http://coolshell.cn/t.php?n=10&callback=？，在之后的实际调用时将?替换回调函数名
-9. 将script元素插入head
-10. 使用timeout参数设置超时时间
+* 如果请求对象过于简略，进入$.ajax函数，并在$.ajax函数内部做些必要的配置后重新进入$.ajaxJSONP逻辑。
+* 如果没有指定回调函数名称jsonpCallback，使用之前定义的jsonp变量作为回调函数名并自增为下一次使用做准备
+* 获取与回调函数名称相同的全局函数，之后会被重写
+* 定义函数abort，这样当请求事件超时后将调用它进而触发error事件
+* 定义一个xhr对象，在发出请求会返回，引用了abort函数，注意这里只是为了API风格一致，JSONP和XMLHttpRequest没有关系
+* 监听刚刚创建的scrip标签的load和error事件，请求成功后将调用ajaxSuccess函数
+* 重写与回调函数同名的全局函数，将它获取的参数对象赋值给responseData，假定请求返回的脚本会执行print(result)，result为数据，这样就会将result保存至responseData变量。
+* 将URL带上回调函数，比如上面提到的URL使用时作为URL参数是http://coolshell.cn/t.php?n=10&callback=？，在之后的实际调用时将?替换回调函数名
+* 将script元素插入head
+* 使用timeout参数设置超时时间
 
 ``` JavaScript
 $.ajaxSettings = {
@@ -2217,18 +2219,20 @@ function serializeData(options) {
       options.url = appendQuery(options.url, options.data), options.data = undefined
 }
 ```
-serializeData在$.ajax内部调用，作用是当使用GET请求时将option.data处理成字符串并调用刚刚说到的appendQuery函数追加到URL后。当使用POST时另有处理。
+serializeData在$.ajax内部调用，作用是当使用GET请求时将option.data处理成字符串并调用刚刚说到的appendQuery函数追加到URL后。当使用POST时另有处理，因为POST请求数据得走send方法。
 
 ``` JavaScript
 $.ajax = function(options){
+   //扩展options对象，因为传入的options可能非常简略
     var settings = $.extend({}, options || {}),
         deferred = $.Deferred && $.Deferred(),
         urlAnchor, hashIndex
     for (key in $.ajaxSettings) if (settings[key] === undefined) settings[key] = $.ajaxSettings[key]
-
+    
+    //发布Ajax调用开始的事件
     ajaxStart(settings)
     
-    //通过对比url检测是否真的跨域
+    //通过对比url检测是否真的跨域，这里针对IE浏览器
     if (!settings.crossDomain) {
       urlAnchor = document.createElement('a')
       urlAnchor.href = settings.url
@@ -2273,20 +2277,23 @@ $.ajax = function(options){
       if (mime.indexOf(',') > -1) mime = mime.split(',', 2)[0]
       xhr.overrideMimeType && xhr.overrideMimeType(mime)
     }
+    //处理POST请求
     if (settings.contentType || (settings.contentType !== false && settings.data && settings.type.toUpperCase() != 'GET'))
       setHeader('Content-Type', settings.contentType || 'application/x-www-form-urlencoded')
 
     if (settings.headers) for (name in settings.headers) setHeader(name, settings.headers[name])
     xhr.setRequestHeader = setHeader
-
+    
+    //options对象中的回调函数就是存在于onreadystatechange回调函数中的各个分支中
     xhr.onreadystatechange = function(){
       if (xhr.readyState == 4) {
         xhr.onreadystatechange = empty
+        //Zepto模块中的超时设计并未直接使用标准API中timeout，而是使用setTimeout函数，这里的意思是请求成功之后清除一下之前设定的计时器
         clearTimeout(abortTimeout)
         var result, error = false
         if ((xhr.status >= 200 && xhr.status < 300) || xhr.status == 304 || (xhr.status == 0 && protocol == 'file:')) {
           dataType = dataType || mimeToDataType(settings.mimeType || xhr.getResponseHeader('content-type'))
-
+          //要使用XHR2级API去读取二进制文件意味着要在发出Ajax请求后手动配置responseType属性
           if (xhr.responseType == 'arraybuffer' || xhr.responseType == 'blob')
             result = xhr.response
           else {
@@ -2334,19 +2341,19 @@ $.ajax = function(options){
   }
 ```
 $.ajax是发起Ajax请求的入口函数，它对传入$.ajax函数的options配置对象进行解析，从而设置MIME类型，设置请求头，监听readystatechange事件进而调用各种回调函数。由于代码较长，我会将一部分讲解放在注释中。具体处理逻辑如下：
-1. 将配置对象options和$.ajaxSettings默认配置对象合并，形成最终使用的settings对象
-2. 调用ajaxStart函数，如果settings.global为true，触发全局的ajaxStart事件
-3. 调用serializeData函数序列化settings.data，如果是非POST请求的情况，则以查询字符串的形式附加在URL后
-4. 获取dataType，它表示开发者期望返回的数据类型
-5. 使用正则表达式判断URl是否是JSONP请求，如果是将dataType设为jsonp
-6. 处理缓存选项，如果cache为false，表示禁用缓存，这样会在URL后附加一个事件戳来使URL始终唯一从而实现禁用缓存。如果未明确cache选项，进一步检测请求类型，如果是script或者jsonp，则禁用缓存。cache为ture表示使用缓存。
-7. 对于JSONP请求，逻辑进入$.ajaxJSONP函数
-8. 通过dataType属性设置合适的MIMEType类型并使用xhr.overrideMimeType函数进行强制设置浏览器对返回数据的类型识别
-9. 当使用POST请求方式时，使用contentType属性代表的编码方式对数据编码，默认是application/x-www-form-urlencoded
-10. 注册onreadystatehange事件，options中的如success之类的回调函数会在不同的阶段触发。前面提到了Ajax模块内部并未使用XHR 2级 API，所以导致三个不同，它们分别是：如果想要对二进制数据方便地处理，应该使用$.ajax函数返回的实际xhr对象上的responseType属性（一个2级API）来获取二进制文件，所以这里产生了针对xhr.responseType的条件分支、对其他出二进制文件以外的数据直接responseText属性，这意味着对json文件需要调用parseJSON函数来解析获取的文本、超时终止的处理方法是通过setTimeout函数设置一个调用xhr.abort的回调函数来实现，而非xhr对象的timeout属性
-11. 在使用xhr.send方法前调用ajaxBeforeSend函数
-12. 设置是否为异步调用，其实浏览器默认的是同步调用
-13. 调用xhr.send函数发送请求
+* 将配置对象options和$.ajaxSettings默认配置对象合并，形成最终使用的settings对象
+* 调用ajaxStart函数，如果settings.global为true，触发全局的ajaxStart事件
+* 调用serializeData函数序列化settings.data，如果是非POST请求的情况，则以查询字符串的形式附加在URL后
+* 获取dataType，它表示开发者期望返回的数据类型
+* 使用正则表达式判断URl是否是JSONP请求，如果是将dataType设为jsonp
+* 处理缓存选项，如果cache为false，表示禁用缓存，这样会在URL后附加一个事件戳来使URL始终唯一从而实现禁用缓存。如果未明确cache选项，进一步检测请求类型，如果是script或者jsonp，则禁用缓存。cache为ture表示使用缓存。
+* 对于JSONP请求，逻辑进入$.ajaxJSONP函数
+* 通过dataType属性设置合适的MIMEType类型并使用xhr.overrideMimeType函数进行强制设置浏览器对返回数据的类型识别
+* 当使用POST请求方式时，使用contentType属性代表的编码方式对数据编码，默认是application/x-www-form-urlencoded
+* 注册onreadystatehange事件，options中的如success之类的回调函数会在不同的阶段触发。前面提到了Ajax模块内部并未使用XHR 2级 API，所以导致三个不同，它们分别是：如果想要对二进制数据方便地处理，应该使用$.ajax函数返回的实际xhr对象上的responseType属性（一个2级API）来获取二进制文件，所以这里产生了针对xhr.responseType的条件分支、对其他出二进制文件以外的数据直接responseText属性，这意味着对json文件需要调用parseJSON函数来解析获取的文本、超时终止的处理方法是通过setTimeout函数设置一个调用xhr.abort的回调函数来实现，而非xhr对象的timeout属性
+* 在使用xhr.send方法前调用ajaxBeforeSend函数
+* 设置是否为异步调用，其实浏览器默认的是同步调用
+* 调用xhr.send函数发送请求
 
 ``` JavaScript
 function parseArguments(url, data, success, dataType) {
