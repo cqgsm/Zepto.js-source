@@ -2147,7 +2147,7 @@ $.ajaxJSONP = function(options, deferred) {
       return xhr
   }
 ```
-$.ajaxJSONP函数用来完成JSONP请求。一个常见JSONP URL如http://coolshell.cn/t.php?n=10&callback=print，当发出如上请求时，将返回文本print(result)。所以将URL作为一个script元素的src属性并插入DOM中就会返回文本print(result)，它将作为js代码调用，最终浏览器将执行print(result)，这样就完成了一个JSONP的请求。而$.ajaxJSONP函数就对这些过程进行了封装。主要逻辑是：
+$.ajaxJSONP函数用来完成JSONP请求。一个常见JSONP URL如coolshell.cn/t.php?n=10&callback=print，当发出如上请求时，将返回文本print(result)。所以将URL作为一个script元素的src属性并插入DOM中就会返回文本print(result)，它将作为js代码调用，最终浏览器将执行print(result)，这样就完成了一个JSONP的请求。而$.ajaxJSONP函数就对这些过程进行了封装。主要逻辑是：
 * 如果请求对象过于简略，进入$.ajax函数，并在$.ajax函数内部做些必要的配置后重新进入$.ajaxJSONP逻辑。
 * 如果没有指定回调函数名称jsonpCallback，使用之前定义的jsonp变量作为回调函数名并自增为下一次使用做准备
 * 获取与回调函数名称相同的全局函数，之后会被重写
@@ -2155,7 +2155,7 @@ $.ajaxJSONP函数用来完成JSONP请求。一个常见JSONP URL如http://coolsh
 * 定义一个xhr对象，在发出请求会返回，引用了abort函数，注意这里只是为了API风格一致，JSONP和XMLHttpRequest没有关系
 * 监听刚刚创建的scrip标签的load和error事件，请求成功后将调用ajaxSuccess函数
 * 重写与回调函数同名的全局函数，将它获取的参数对象赋值给responseData，假定请求返回的脚本会执行print(result)，result为数据，这样就会将result保存至responseData变量。
-* 将URL带上回调函数，比如上面提到的URL使用时作为URL参数是http://coolshell.cn/t.php?n=10&callback=？，在之后的实际调用时将?替换回调函数名
+* 将URL带上回调函数，比如上面提到的URL使用时作为URL参数是coolshell.cn/t.php?n=10&callback=？，在之后的实际调用时将?替换回调函数名
 * 将script元素插入head
 * 使用timeout参数设置超时时间
 
@@ -2355,7 +2355,7 @@ $.ajax是发起Ajax请求的入口函数，它对传入$.ajax函数的options配
 * 设置是否为异步调用，其实浏览器默认的是同步调用
 * 调用xhr.send函数发送请求
 这里要注意一点：
-* Zepto的Ajax模块因为没有封装responseType属性，所以当你想处理二进制文件是最好像这样：
+  * Zepto的Ajax模块因为没有封装responseType属性，所以当你想处理二进制文件是最好像这样：
 ``` JavaScript
 var xhr=$.ajax({
       url: '1.jpg',
